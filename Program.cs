@@ -2,6 +2,7 @@
 using KaratExercises;
 using System.Drawing;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Xml.Linq;
 
@@ -3081,6 +3082,658 @@ int GetMaxIndex(int[] arr, int a, int b, int c)
 #endregion
 
 #endregion
+
+#region Moderate Questions
+
+#region Number swapper
+
+//For ints only but can overflow for large numbers
+void Swapper(ref int a, ref int b)
+{
+    //assuming b is larger
+    b = b - a;
+    a = a + b;
+    b = a - b;
+}
+
+//For all data types
+void SwapAlt(ref int a, ref int b)
+{
+    a = a ^ b;
+    b = a ^ b;
+    a = a ^ b;
+}
+
+#endregion
+
+#region Word frequencies
+
+// Part 1
+int GetFrequency(string book, string word)
+{
+    var count = 0;
+    var words = book.Split(' ', '\n', ',', '.', '?', '-', '"', '\t', '!', ':');
+
+    foreach(var w in words)
+    {
+        if(String.Equals(word, w, StringComparison.OrdinalIgnoreCase))
+            count++;
+    }
+
+    return count;
+}
+
+//Part 2
+Dictionary<string, int> CountFrequency(string book)
+{
+    var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    var words = book.Split(' ', '\n', ',', '.', '?', '-', '"', '\t', '!', ':');
+
+    foreach(var w in words)
+    {
+        if(w != "")
+        {
+            if (map.ContainsKey(w))
+                map[w] += 1;
+            else
+                map[w] = 1;
+        }
+    }
+
+    return map;
+}
+
+int GetFrequencies(Dictionary<string, int> map, string word)
+{
+    if (map is null || word is null) return -1;
+
+    word = word.ToLower();
+
+    if(map.ContainsKey(word))
+        return map[word];
+
+    return 0;
+}
+
+#endregion
+
+#region Line Intersection
+
+Point getIntersection(Point FirstStart, Point FirstEnd, Point SecondStart, Point SecondEnd)
+{
+    bool isBetween(double a, double b, double c) => c >= Math.Min(a, b) && c <= Math.Max(a, b);
+
+    //First line points
+    var fx1 = FirstStart.X;
+    var fy1 = FirstStart.Y;
+    var fx2 = FirstEnd.X;
+    var fy2 = FirstEnd.Y;
+
+    //Second line points
+    var sx1 = SecondStart.X;
+    var sy1 = SecondStart.Y;
+    var sx2 = SecondEnd.X;
+    var sy2 = SecondEnd.Y;
+
+    //Check if lines are vertical
+    var isFVertical = fx1 == fx2;
+    var isSVertical = sx1 == sx2;
+
+    // Case 1: Both lines vertical (parallel, no unique intersection)
+    if (isFVertical && isSVertical)
+    {
+        if(fx1 != sx1)
+            return null;
+
+        //Gets the maximum of the two startings Ys from both lines
+        var overlapY = Math.Max(fy1, sy1);
+
+        //Checks if the overlap Y coord is less than the minimum of the end point Ys
+        if(overlapY <= Math.Min(fy2, sy2))
+            return new Point(fx1, overlapY);
+
+        return null;
+    }
+        
+
+    double fm = 0, sm = 0, fc = 0, sc = 0;
+
+    // Compute gradients(m) and intercepts(c) if not vertical, y = mx + c, m = (y2 - y1) / (x2 - x1)
+    if (!isFVertical)
+    {
+        fm = (fy2 - fy1) / (fx2 - fx1);
+        fc = fy1 - (fm * fx1);
+    }
+
+    if (!isSVertical)
+    {
+        sm = (sy2 - sy1) / (sx2 - sx1);
+        sc = sy1 - (sm * sx1);
+    }
+
+    double ix = 0, iy = 0;
+
+    if (isFVertical)
+    {
+        ix = fx1; // x value is either fx1 or fx2 because fx1 == fx2 since the line is vertical
+
+        iy = (ix * sm) + sc; // use gradient and intercept of second line since ix will also be available on second line
+    }
+    else if (isSVertical)
+    {
+        ix = sx1;
+        iy = (ix * fm) + fc;
+    }
+    else if (Math.Abs(sm - fm) < 1e-10) // 1e-10 => 1 * 10^-10
+    {
+        return null; // Gradients are almost the same so lines are parallel
+    }
+    else
+    {
+        ix = (sc - fc) / (fm - sm); // since they are both non vertical, at intersection point (x,y), m1x + c1 (for first line) = m2x + c2 (for second line)
+        iy = (ix * fm) + fc;
+    }
+
+    //check if intersection point lies within each line given and not outside of it
+    if (!isBetween(fx1, fx2, ix) || !isBetween(fy1, fy2, iy))
+        return null;
+
+    if (!isBetween(sx1, sx2, ix) || !isBetween(sy1, sy2, iy))
+        return null;
+
+    return new Point(ix, iy);
+}
+
+#endregion
+
+#region Tic Tac Win
+
+//Class is below for n x n board
+TicTacToe obj = new TicTacToe(3);
+
+//For 3 x 3 board
+char TicTacToeWinner(char[][] board)
+{
+    // Check rows
+    for (int r = 0; r < 3; r++)
+    {
+        if (board[r][0] != ' ' &&
+            board[r][0] == board[r][1] &&
+            board[r][1] == board[r][2])
+        {
+            return board[r][0];
+        }
+    }
+
+    // Check columns
+    for (int c = 0; c < 3; c++)
+    {
+        if (board[0][c] != ' ' &&
+            board[0][c] == board[1][c] &&
+            board[1][c] == board[2][c])
+        {
+            return board[0][c];
+        }
+    }
+
+    // Check main diagonal
+    if (board[0][0] != ' ' &&
+        board[0][0] == board[1][1] &&
+        board[1][1] == board[2][2])
+    {
+        return board[0][0];
+    }
+
+    // Check anti-diagonal
+    if (board[0][2] != ' ' &&
+        board[0][2] == board[1][1] &&
+        board[1][1] == board[2][0])
+    {
+        return board[0][2];
+    }
+
+    // No winner
+    return ' ';
+}
+
+
+#endregion
+
+#region Factorial Zeros
+
+int countTrailingZeros(int num)
+{
+    if (num < 0)
+        return -1;
+
+    var count = 0;
+
+    for(int i = 5; num/i > 0; i *= 5)
+    {
+        count += num / i;
+    }
+
+    return count;
+}
+
+//Time O(Log5n)
+
+#endregion
+
+#region Smallest Difference
+
+int getSmallestDiff(int[] A, int[] B)
+{
+    Array.Sort(A);
+    Array.Sort(B);
+
+    int i = 0, j = 0;
+    var minDiff = int.MaxValue;
+
+    while (i < A.Length && j < B.Length)
+    {
+        var diff = Math.Abs(A[i] - B[j]);
+
+        minDiff = Math.Min(minDiff, diff);
+
+        if (A[i] < B[j])
+            i++;
+        else
+            j++;
+    }
+
+    return minDiff;
+}
+
+/*
+ * Time: O(n log n + m log m) for sorting
+ * Two-pointer scan: O(n + m)
+ * Space: O(1)
+*/
+
+#endregion
+
+#region Number Max
+
+int NumberMax(int a, int b)
+{
+    var c = (long)a - (long)b; // prevent overflow; diff is negative if a is smaller and positive if a is bigger
+
+    // In 64 bit numbers (long data type), the first from left (most significant) bit is a sign bit
+    // and we right shift it to the least significant bit; after & with 1,  0 if a >= b, 1 if a < b
+    var sign = (int)((c >> 63) & 1);
+
+    var k = 1 - sign; // this operation in a way reverses the sign giving us either 0 or 1
+
+    return a * k + b * sign; // multiplying the numbers with the reversed signs returns only one of them
+}
+
+#endregion
+
+#region English Int
+
+string NumberToWords(int num)
+{
+    if (num == 0)
+        return "Zero";
+
+    if (num < 0)
+        return "Negative " + NumberToWords(-num);
+
+    //193,235,123 as testcase
+    var ones = new string[]{
+            "", "One", "Two", "Three", "Four", "Five",
+            "Six", "Seven", "Eight", "Nine"
+        };
+
+    var teens = new string[]{
+            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen",
+            "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+        };
+
+    var tens = new string[]{
+            "", "", "Twenty", "Thirty", "Forty", "Fifty",
+            "Sixty", "Seventy", "Eighty", "Ninety"
+        };
+
+    var thousands = new string[]{
+            "", "Thousand", "Million", "Billion"
+        };
+
+    var result = new StringBuilder();
+    var chunkIndex = 0;
+
+    while (num > 0)
+    {
+        var chunk = num % 1000;
+
+        if (chunk != 0)
+        {
+            var n = convertChunk(chunk) + thousands[chunkIndex] + " ";
+            result.Insert(0, n);
+        }
+
+        chunkIndex++;
+        num /= 1000;
+    }
+
+    string convertChunk(int num)
+    {
+        var res = new StringBuilder();
+
+        if (num >= 100)
+        {
+            res.Append(ones[(num / 100)] + " Hundred ");
+            num %= 100;
+        }
+
+        if (num >= 20)
+        {
+            var n = tens[num / 10] + " ";
+            res.Append(n);
+            num %= 10;
+        }
+        else if (num >= 10)
+        {
+            var n = teens[num - 10] + " ";
+            res.Append(n);
+            return res.ToString();
+        }
+
+        if (num > 0)
+        {
+            var n = ones[num] + " ";
+            res.Append(n);
+        }
+
+        return res.ToString();
+    }
+
+    return result.ToString().Trim();
+}
+
+#endregion
+
+#region Operations
+
+int Negate(int num)
+{
+    var neg = 0;
+    var delta = num < 0 ? 1 : -1;
+
+    while(num != 0)
+    {
+        neg += delta;
+        num += delta;
+    }
+
+    return neg;
+}
+
+int Subtract(int a, int b)
+{
+    return a + Negate(b);
+}
+
+int Multiplication(int a, int b)
+{
+    if(a == 0 || b == 0)
+        return 0;
+
+    var absA = Math.Abs(a);
+    var absB = Math.Abs(b);
+
+    var smaller = absA < absB ? absA : absB;
+    var bigger = absA < absB ? absB : absA;
+
+    var sum = 0;
+
+    for(int i = 0; i < smaller; i++)
+    {
+        sum += bigger;
+    }
+
+    if((a < 0) ^ (b < 0))
+        sum = Negate(sum);
+
+    return sum;
+}
+
+int Division(int a, int b)
+{
+    if(b == 0)
+        throw new DivideByZeroException();
+
+    var absA = Math.Abs(a);
+    var absB = Math.Abs(b);
+
+    var quotient = 1;
+
+    while (absA >= absB)
+    {
+        absA = Subtract(absA, absB);
+        quotient += 1;
+    }
+
+    if ((a < 0) ^ (b < 0))
+        quotient = Negate(quotient);
+
+    return quotient;
+}
+
+#endregion
+
+#region Living People
+
+int GetYear(List<(int birth, int death)> people)
+{
+    var yearsPopulation = new int[102]; // index 0 = 1900, index 101 = 2001 sentinel 
+
+    foreach(var(birth, death) in people)
+    {
+        yearsPopulation[birth - 1900] += 1;
+        yearsPopulation[(death + 1) - 1900] += 1;
+    }
+
+    var maxYear = 1900;
+    var maxPop = 0;
+
+    var currentPop = 0;
+
+    for(int i = 0; i < 101; i++) //101 is 2001 which is not required
+    {
+        currentPop += yearsPopulation[i];
+
+        if(currentPop > maxPop)
+        {
+            maxPop = currentPop;
+            maxYear = 1900 + i;
+        }
+    }
+
+    return maxYear;
+}
+
+//Time: O(P + R)  → effectively O(P) since R is constant: 101
+//Space: O(R)     → constant space ~ 101
+
+#endregion
+
+#region Diving Board
+
+List<int> GetPossibleLengths(int shorter, int longer, int k)
+{
+    var result = new List<int>();
+
+    if (k == 0)
+        return result;
+
+    if(shorter == longer)
+    {
+        result.Add(shorter * k);
+        return result;
+    }
+
+    for(int i = 0; i <= k; i++)
+    {
+        var numLonger = i; // when number of longer planks is i, number of shorter planks will be k - i 
+        var numShorter = k - i;
+
+        var len = (numLonger * longer) + (numShorter * numShorter);
+        result.Add(len);
+    }
+
+    return result;
+}
+
+#endregion
+
+#region XML Encoding
+
+string EncodeXML(XMLElement root, TagMapper map)
+{
+    var sb = new StringBuilder();
+
+    EncodeXMLElement(root, map, sb);
+
+    return sb.ToString().Trim();
+}
+
+void EncodeXMLElement(XMLElement ele, TagMapper map, StringBuilder sb)
+{
+    // 1. element tag id
+    AppendToken(map.GetNum(ele.Tag).ToString(), sb);
+
+    // 2. attributes: TagId Value 0
+    foreach (var attr in ele.Attributes)
+    {
+        AppendToken(map.GetNum(attr.Tag).ToString(), sb);
+        AppendToken(attr.Value, sb);
+    }
+
+    // 3. END of attributes
+    AppendToken("0", sb);
+
+    // 4. Children or value
+    if (!string.IsNullOrEmpty(ele.Value))
+    {
+        AppendToken(ele.Value, sb);
+    }
+    else
+    {
+        foreach(var child in ele.Children)
+        {
+            EncodeXMLElement(child, map, sb);
+        }
+    }
+
+    AppendToken("0", sb);
+}
+
+void AppendToken(string token, StringBuilder sb)
+{
+    sb.Append(token);
+    sb.Append(' ');
+}
+
+#endregion
+
+#endregion
+
+class Point
+{
+    public double X { get; }
+    public double Y { get; }
+
+    public Point(double x, double y)
+    {
+        X = x;
+        Y = y;
+    }
+}
+
+public class TicTacToe
+{
+    private int diagCount;
+    private int antiDiagCount;
+    private int[] rowsCount;
+    private int[] colsCount;
+    private int n;
+
+    public TicTacToe(int n)
+    {
+        diagCount = 0;
+        antiDiagCount = 0;
+        rowsCount = new int[n];
+        colsCount = new int[n];
+        this.n = n;
+    }
+
+    public int Move(int row, int col, int player)
+    {
+        var addToPlayer = (player == 1) ? 1 : -1;
+
+        rowsCount[row] += addToPlayer;
+        colsCount[col] += addToPlayer;
+
+        if (row == col)
+            diagCount += addToPlayer;
+
+        if ((row + col) == n - 1)
+            antiDiagCount += addToPlayer;
+
+        if (Math.Abs(rowsCount[row]) == n ||
+           Math.Abs(colsCount[col]) == n ||
+           Math.Abs(diagCount) == n ||
+           Math.Abs(antiDiagCount) == n
+           )
+        {
+            return player;
+        }
+
+        return 0;
+    }
+}
+
+public class XMLAttribute
+{
+    public string Tag { get; set; }
+    public string Value { get; set; }
+
+    public XMLAttribute(string tag, string value)
+    {
+        Tag = tag;
+        Value = value;
+    }
+}
+
+public class XMLElement
+{
+    public string Tag { get; set; }
+    public string Value { get; set; }
+    public List<XMLAttribute> Attributes { get; } = new();
+    public List<XMLElement> Children { get; } = new();
+
+    public XMLElement(string tag)
+    {
+        Tag = tag;
+    }
+}
+
+public class TagMapper
+{
+    private readonly Dictionary<string, int> _mapper;
+
+    public TagMapper(Dictionary<string, int> mapper)
+    {
+        _mapper = mapper;
+    }
+
+    public int GetNum(string key)
+    {
+        return _mapper[key];
+    }
+}
 
 
 
